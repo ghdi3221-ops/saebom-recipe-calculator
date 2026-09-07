@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>요리 레시피 정리</title>
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+</head>
+
+
+<body>
+
+    <div class="page">
+
+
+        <!-- =========================
+             상단
+        ========================== -->
+
+        <header class="header">
+
+
+            <!-- 정수 설명 -->
+
+            <div class="info-box">
+
+                <div class="info-icon">
+                    💎
+                </div>
+
+                <div>
+
+                    <h3>
+                        정수란?
+                    </h3>
+
+                    <p>
+                        각 농작물, 나무 등<br>
+                        16개의 정수 1개로 통일!
+                    </p>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- 메인 제목 -->
+
+            <div class="title-box">
+
+                <div class="title-decoration">
+                    🌱
+                </div>
+
+                <h1>
+                    🍳 요리 레시피 정리
+                </h1>
+
+                <p>
+                    ※ 정수는 각 농작물, 나무, 그리고 16개의 정수 1개를 의미합니다.
+                </p>
+
+            </div>
+
+
+
+            <!-- 점수 설명 -->
+
+            <div class="info-box">
+
+                <div>
+
+                    <h3>
+                        ✦ 요리 제단 점수는
+                    </h3>
+
+                    <p>
+                        각 요리의 1개의 정수에 해당하는 점수입니다.<br>
+                        <small>
+                            (재료는 정해진 개수만큼 필요합니다.)
+                        </small>
+                    </p>
+
+                </div>
+
+            </div>
+
+
+        </header>
+
+
+
+        <!-- =========================
+             검색
+        ========================== -->
+
+        <div class="search-area">
+
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="🔍 요리 이름 또는 재료 검색"
+            >
+
+            <button
+                id="resetButton"
+            >
+                전체 보기
+            </button>
+
+        </div>
+
+
+
+        <!-- =========================
+             일반 요리
+        ========================== -->
+
+        <section class="recipe-section normal">
+
+
+            <div class="section-title">
+
+                <span class="section-icon">
+                    👨‍🍳
+                </span>
+
+                <span>
+                    일반 요리
+                </span>
+
+            </div>
+
+
+
+            <div
+                id="normalRecipes"
+                class="recipe-grid"
+            ></div>
+
+
+        </section>
+
+
+
+        <!-- =========================
+             고품질 요리
+        ========================== -->
+
+        <section class="recipe-section high-quality">
+
+
+            <div class="section-title">
+
+                <span class="section-icon">
+                    👑
+                </span>
+
+                <span>
+                    고품질 요리
+                </span>
+
+            </div>
+
+
+
+            <div
+                id="qualityRecipes"
+                class="recipe-grid"
+            ></div>
+
+
+        </section>
+
+
+
+        <!-- =========================
+             검색 결과 없음
+        ========================== -->
+
+        <div
+            id="noResult"
+            class="no-result"
+        >
+            검색 결과가 없습니다.
+        </div>
+
+
+
+        <!-- =========================
+             하단
+        ========================== -->
+
+        <footer>
+
+            ★ 효율적인 요리 선택으로 빠르게 20억 점을 달성하세요! ★
+
+        </footer>
+
+
+    </div>
+
+
+
+    <!-- =========================
+         상세 정보 팝업
+    ========================== -->
+
+    <div
+        id="modal"
+        class="modal"
+    >
+
+        <div class="modal-content">
+
+
+            <button
+                id="closeModal"
+                class="close-button"
+            >
+                ×
+            </button>
+
+
+            <img
+                id="modalImage"
+                class="modal-image"
+                src=""
+                alt=""
+            >
+
+
+            <h2 id="modalName">
+                요리 이름
+            </h2>
+
+
+            <div
+                id="modalIngredients"
+                class="modal-ingredients"
+            ></div>
+
+
+            <div
+                id="modalScore"
+                class="modal-score"
+            >
+                0점
+            </div>
+
+
+        </div>
+
+    </div>
+
+
+
+    <script src="script.js"></script>
+
+</body>
+
+</html>
