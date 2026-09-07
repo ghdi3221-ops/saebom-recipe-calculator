@@ -332,7 +332,7 @@ const qualityRecipes = [
         score: 1186800,
         ingredients: [
             { icon: "🌾", name: "고품질 밀", amount: 1 },
-            { icon: "🟣", name: "고품질 비트", amount: 2 },
+            { icon: "🟣", name: "고품질 비트", amount: 1 },
             { icon: "🥕", name: "고품질 당근", amount: 1 },
             { icon: "🎃", name: "고품질 호박 조각", amount: 1 },
             { icon: "🍉", name: "고품질 수박 조각", amount: 1 },
