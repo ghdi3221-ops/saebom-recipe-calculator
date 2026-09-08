@@ -729,6 +729,25 @@ function createCalculator(recipe) {
             계산하기
         </button>
 
+        <button
+            id="craftRecipe"
+            type="button"
+            style="
+                width:100%;
+                margin-top:10px;
+                padding:12px;
+                border:0;
+                border-radius:12px;
+                background:#e28a22;
+                color:white;
+                font-size:17px;
+                font-weight:700;
+                cursor:pointer;
+            "
+        >
+            🍳 제작하기 (보유 정수 차감)
+        </button>
+
 
         <div
             id="calculationResult"
@@ -1306,6 +1325,72 @@ function openModal(recipe) {
 
 
     // ======================================================
+    // 제작하기 버튼
+    // ======================================================
+
+    const craftButton =
+        document.getElementById(
+            "craftRecipe"
+        );
+
+    if (craftButton && countInput) {
+
+        craftButton.addEventListener(
+            "click",
+            function () {
+
+                let count = parseInt(
+                    countInput.value,
+                    10
+                );
+
+                if (isNaN(count) || count < 1) {
+                    count = 1;
+                }
+
+                count = Math.floor(count);
+                countInput.value = count;
+
+                const crafted =
+                    craftRecipeFromInventory(
+                        recipe,
+                        count
+                    );
+
+                if (crafted) {
+
+                    const result =
+                        document.getElementById(
+                            "calculationResult"
+                        );
+
+                    if (result) {
+
+                        result.innerHTML = `
+                            <div style="
+                                padding:12px;
+                                border-radius:10px;
+                                background:#e9fff1;
+                                color:#138a4d;
+                                font-weight:700;
+                                text-align:center;
+                            ">
+                                ✅ ${formatNumber(count)}개 제작 완료!<br>
+                                ${formatNumber(recipe.score * count)}점 획득
+                            </div>
+                        `;
+
+                    }
+
+                }
+
+            }
+        );
+
+    }
+
+
+    // ======================================================
     // 팝업 열기
     // ======================================================
 
@@ -1793,6 +1878,78 @@ function restoreSavedInventory() {
 }
 
 
+
+
+// ==========================================================
+// 보유 정수 차감 후 실제 제작
+// ==========================================================
+
+function craftRecipeFromInventory(recipe, count) {
+
+    const inputs =
+        document.querySelectorAll(
+            "#inventoryInputs input[data-ingredient]"
+        );
+
+    if (!inputs.length) {
+        alert("먼저 보유 정수 입력창을 열어주세요.");
+        return false;
+    }
+
+    const inventory = {};
+    const inputMap = {};
+
+    inputs.forEach(function (input) {
+
+        let value = parseInt(input.value, 10);
+
+        if (isNaN(value) || value < 0) {
+            value = 0;
+        }
+
+        value = Math.floor(value);
+        input.value = value;
+        inventory[input.dataset.ingredient] = value;
+        inputMap[input.dataset.ingredient] = input;
+
+    });
+
+    // 모든 재료가 충분한지 먼저 확인 (하나라도 부족하면 차감하지 않음)
+    for (const ingredient of recipe.ingredients) {
+
+        const owned = Number(inventory[ingredient.name] || 0);
+        const required = ingredient.amount * count;
+
+        if (owned < required) {
+
+            alert(
+                `${ingredient.name}이(가) 부족합니다.\n\n` +
+                `필요: ${formatNumber(required)}개\n` +
+                `보유: ${formatNumber(owned)}개`
+            );
+
+            return false;
+        }
+    }
+
+    // 재료 차감
+    recipe.ingredients.forEach(function (ingredient) {
+
+        const required = ingredient.amount * count;
+        inventory[ingredient.name] -= required;
+        inputMap[ingredient.name].value = inventory[ingredient.name];
+
+    });
+
+    window.noriCurrentInventory = { ...inventory };
+    saveInventoryFromInputs();
+
+    // 제작 가능 레시피 목록도 즉시 갱신
+    findCraftableRecipes();
+
+    return true;
+
+}
 
 
 function findCraftableRecipes() {
