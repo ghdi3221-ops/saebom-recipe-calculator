@@ -1542,6 +1542,91 @@ function createInventoryFinder() {
             🧮 보유 정수로 만들 수 있는 요리 찾기
         </button>
 
+        <button
+            id="openOwnedRecipeScore"
+            type="button"
+            style="
+                width:100%;
+                margin-top:10px;
+                padding:14px 18px;
+                border:2px solid #18b86a;
+                border-radius:14px;
+                background:#18b86a;
+                color:white;
+                font-size:18px;
+                font-weight:700;
+                cursor:pointer;
+            "
+        >
+            🍳 보유 요리로 점수 계산
+        </button>
+
+        <div
+            id="ownedRecipeScorePanel"
+            style="
+                display:none;
+                margin-top:12px;
+                padding:18px;
+                border:2px solid #18b86a;
+                border-radius:16px;
+                background:rgba(255,255,255,.92);
+                box-sizing:border-box;
+            "
+        >
+
+            <div style="
+                font-size:20px;
+                font-weight:700;
+                margin-bottom:8px;
+            ">
+                🍳 보유 요리 입력
+            </div>
+
+            <div style="
+                font-size:14px;
+                margin-bottom:14px;
+                line-height:1.5;
+            ">
+                가지고 있는 요리의 개수를 입력하면<br>
+                입력한 수량을 기준으로 총 요리 점수를 자동으로 계산합니다.
+            </div>
+
+            <div
+                id="ownedRecipeInputs"
+                style="
+                    display:grid;
+                    grid-template-columns:repeat(3,minmax(0,1fr));
+                    gap:8px;
+                    width:100%;
+                    max-width:100%;
+                    box-sizing:border-box;
+                "
+            ></div>
+
+            <div
+                id="ownedRecipeScoreResult"
+                style="
+                    margin-top:14px;
+                    padding:16px;
+                    border-radius:12px;
+                    background:#fff8e8;
+                    border:2px solid #e5b94b;
+                    text-align:center;
+                "
+            >
+                <div style="font-size:14px;font-weight:700;">
+                    🏆 현재 보유 요리 총점
+                </div>
+                <div id="ownedRecipeTotalScore" style="font-size:25px;font-weight:800;margin-top:5px;">
+                    0점
+                </div>
+                <div id="ownedRecipeCountSummary" style="font-size:13px;margin-top:5px;">
+                    보유 요리 0개
+                </div>
+            </div>
+
+        </div>
+
         <div
             id="inventoryPanel"
             style="
@@ -1687,6 +1772,12 @@ function createInventoryFinder() {
 
     // 이전에 입력했던 보유 정수 복원
     restoreSavedInventory();
+
+    // ======================================================
+    // 보유 요리 점수 계산기 생성
+    // ======================================================
+
+    createOwnedRecipeScoreCalculator();
 
     // 입력할 때마다 자동 저장
     inputs
@@ -1878,6 +1969,270 @@ function restoreSavedInventory() {
 }
 
 
+
+
+// ==========================================================
+// 보유 요리 점수 계산
+// ==========================================================
+
+const NORI_OWNED_RECIPE_STORAGE_KEY =
+    "nori_owned_recipe_inventory_v1";
+
+
+function loadSavedOwnedRecipes() {
+
+    try {
+
+        const saved =
+            localStorage.getItem(
+                NORI_OWNED_RECIPE_STORAGE_KEY
+            );
+
+        if (!saved) {
+            return {};
+        }
+
+        const data = JSON.parse(saved);
+
+        if (
+            !data ||
+            typeof data !== "object" ||
+            Array.isArray(data)
+        ) {
+            return {};
+        }
+
+        return data;
+
+    } catch (error) {
+
+        console.warn(
+            "보유 요리 저장값을 불러오지 못했습니다.",
+            error
+        );
+
+        return {};
+
+    }
+
+}
+
+
+function saveOwnedRecipesFromInputs() {
+
+    const owned = {};
+
+    document
+        .querySelectorAll(
+            "#ownedRecipeInputs input[data-recipe-name]"
+        )
+        .forEach(function (input) {
+
+            let value = parseInt(input.value, 10);
+
+            if (isNaN(value) || value < 0) {
+                value = 0;
+            }
+
+            value = Math.floor(value);
+            input.value = value;
+            owned[input.dataset.recipeName] = value;
+
+        });
+
+    try {
+
+        localStorage.setItem(
+            NORI_OWNED_RECIPE_STORAGE_KEY,
+            JSON.stringify(owned)
+        );
+
+    } catch (error) {
+
+        console.warn(
+            "보유 요리를 저장하지 못했습니다.",
+            error
+        );
+
+    }
+
+}
+
+
+function calculateOwnedRecipeScore() {
+
+    let totalScore = 0;
+    let totalCount = 0;
+
+    document
+        .querySelectorAll(
+            "#ownedRecipeInputs input[data-recipe-name]"
+        )
+        .forEach(function (input) {
+
+            let count = parseInt(input.value, 10);
+
+            if (isNaN(count) || count < 0) {
+                count = 0;
+            }
+
+            count = Math.floor(count);
+            input.value = count;
+
+            const score = Number(input.dataset.recipeScore || 0);
+
+            totalCount += count;
+            totalScore += score * count;
+
+        });
+
+    const totalScoreElement =
+        document.getElementById("ownedRecipeTotalScore");
+
+    if (totalScoreElement) {
+        totalScoreElement.textContent =
+            `${formatNumber(totalScore)}점`;
+    }
+
+    const countSummary =
+        document.getElementById("ownedRecipeCountSummary");
+
+    if (countSummary) {
+        countSummary.textContent =
+            `보유 요리 ${formatNumber(totalCount)}개`;
+    }
+
+    return totalScore;
+
+}
+
+
+function createOwnedRecipeScoreCalculator() {
+
+    const inputsContainer =
+        document.getElementById("ownedRecipeInputs");
+
+    if (!inputsContainer || inputsContainer.dataset.initialized === "true") {
+        return;
+    }
+
+    inputsContainer.dataset.initialized = "true";
+
+    const responsiveStyle = document.createElement("style");
+    responsiveStyle.textContent = `
+        @media (max-width: 900px) {
+            #ownedRecipeInputs {
+                grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+            }
+        }
+        @media (max-width: 600px) {
+            #ownedRecipeInputs {
+                grid-template-columns:1fr !important;
+            }
+        }
+    `;
+    document.head.appendChild(responsiveStyle);
+
+    const saved = loadSavedOwnedRecipes();
+
+    getAllRecipes().forEach(function (recipe) {
+
+        const row = document.createElement("label");
+
+        row.style.cssText = `
+            display:flex;
+            align-items:center;
+            gap:8px;
+            padding:8px 10px;
+            border:1px solid #c9e8d5;
+            border-radius:10px;
+            background:#f7fff9;
+            box-sizing:border-box;
+            width:100%;
+            max-width:100%;
+            min-width:0;
+            overflow:hidden;
+        `;
+
+        const savedCount =
+            Number(saved[recipe.name] || 0);
+
+        row.innerHTML = `
+            <span style="
+                flex:1 1 auto;
+                min-width:0;
+                white-space:nowrap;
+                overflow:hidden;
+                text-overflow:ellipsis;
+                line-height:1.35;
+            ">
+                ${recipe.name}
+                <small style="display:block;font-size:11px;opacity:.65;">
+                    ${formatNumber(recipe.score)}점 / 1개
+                </small>
+            </span>
+
+            <input
+                type="number"
+                min="0"
+                step="1"
+                value="${savedCount}"
+                data-recipe-name="${recipe.name}"
+                data-recipe-score="${recipe.score}"
+                style="
+                    flex:0 0 82px;
+                    width:82px;
+                    min-width:0;
+                    margin-left:auto;
+                    padding:7px;
+                    border:1px solid #aaa;
+                    border-radius:7px;
+                    box-sizing:border-box;
+                "
+            >
+        `;
+
+        inputsContainer.appendChild(row);
+
+    });
+
+    inputsContainer
+        .querySelectorAll("input[data-recipe-name]")
+        .forEach(function (input) {
+
+            input.addEventListener("input", function () {
+                saveOwnedRecipesFromInputs();
+                calculateOwnedRecipeScore();
+            });
+
+        });
+
+    calculateOwnedRecipeScore();
+
+    const openButton =
+        document.getElementById("openOwnedRecipeScore");
+
+    if (openButton) {
+
+        openButton.addEventListener("click", function () {
+
+            const panel =
+                document.getElementById("ownedRecipeScorePanel");
+
+            if (!panel) {
+                return;
+            }
+
+            panel.style.display =
+                panel.style.display === "none"
+                    ? "block"
+                    : "none";
+
+        });
+
+    }
+
+}
 
 
 // ==========================================================
