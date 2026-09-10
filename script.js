@@ -80,6 +80,7 @@ const normalRecipes = [
         ingredients: [
             { icon: "🎃", name: "호박의 정수", amount: 1 },
             { icon: "🌿", name: "사탕수수의 정수", amount: 2 },
+            { icon: "🌾", name: "밀의 정수", amount: 1 },
             { icon: "🪵", name: "나무의 정수", amount: 1 }
         ]
     },
