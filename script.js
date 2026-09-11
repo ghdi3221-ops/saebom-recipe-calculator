@@ -280,6 +280,7 @@ const qualityRecipes = [
         ingredients: [
             { icon: "🥔", name: "고품질 감자", amount: 2 },
             { icon: "🌿", name: "고품질 사탕수수", amount: 2 }
+            { icon: "🌿", name: "고품질 네더 사마귀", amount: 1 }
         ]
     },
 
