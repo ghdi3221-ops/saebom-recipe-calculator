@@ -12,9 +12,10 @@ const normalRecipes = [
     {
         name: "감자 구이",
         image: "images/normal_01.png",
-        score: 9880,
+        score: 7210,
+        salePrice: 4210,
         ingredients: [
-            { icon: "🥔", name: "감자의 정수", amount: 6 },
+            { icon: "🥔", name: "감자의 정수", amount: 3 },
             { icon: "🪵", name: "나무의 정수", amount: 1 }
         ]
     },
@@ -22,9 +23,10 @@ const normalRecipes = [
     {
         name: "감자 팬케이크",
         image: "images/normal_02.png",
-        score: 18770,
+        score: 16100,
+        salePrice: 6290,
         ingredients: [
-            { icon: "🥔", name: "감자의 정수", amount: 6 },
+            { icon: "🥔", name: "감자의 정수", amount: 3 },
             { icon: "🌾", name: "밀의 정수", amount: 1 },
             { icon: "🪵", name: "나무의 정수", amount: 1 }
         ]
@@ -33,9 +35,10 @@ const normalRecipes = [
     {
         name: "달콤 당근 스튜",
         image: "images/normal_03.png",
-        score: 14220,
+        score: 11230,
+        salePrice: 6590,
         ingredients: [
-            { icon: "🥕", name: "당근의 정수", amount: 6 },
+            { icon: "🥕", name: "당근의 정수", amount: 3 },
             { icon: "🌿", name: "사탕수수의 정수", amount: 1 },
             { icon: "🪵", name: "나무의 정수", amount: 1 }
         ]
@@ -44,9 +47,10 @@ const normalRecipes = [
     {
         name: "당근 빵",
         image: "images/normal_04.png",
-        score: 19410,
+        score: 16420,
+        salePrice: 6500,
         ingredients: [
-            { icon: "🥕", name: "당근의 정수", amount: 6 },
+            { icon: "🥕", name: "당근의 정수", amount: 3 },
             { icon: "🌾", name: "밀의 정수", amount: 1 },
             { icon: "🪵", name: "나무의 정수", amount: 1 }
         ]
@@ -66,10 +70,11 @@ const normalRecipes = [
     {
         name: "루비 비트 샐러드",
         image: "images/normal_06.png",
-        score: 15550,
+        score: 35550,
+        salePrice: 6520,
         ingredients: [
             { icon: "🟣", name: "비트의 정수", amount: 1 },
-            { icon: "🍎", name: "사과", amount: 4 }
+            { icon: "🍎", name: "사과", amount: 8 }
         ]
     },
 
@@ -80,7 +85,7 @@ const normalRecipes = [
         ingredients: [
             { icon: "🎃", name: "호박의 정수", amount: 1 },
             { icon: "🌿", name: "사탕수수의 정수", amount: 2 },
-            { icon: "🌾", name: "밀의 정수", amount: 1 },
+            { icon: "🟣", name: "비트의 정수", amount: 1 },
             { icon: "🪵", name: "나무의 정수", amount: 1 }
         ]
     },
@@ -88,9 +93,10 @@ const normalRecipes = [
     {
         name: "베리 파르페",
         image: "images/normal_08.png",
-        score: 11160,
+        score: 7430,
+        salePrice: 4350,
         ingredients: [
-            { icon: "🍓", name: "달콤한 열매의 정수", amount: 6 },
+            { icon: "🍓", name: "달콤한 열매의 정수", amount: 3 },
             { icon: "🌿", name: "사탕수수의 정수", amount: 2 }
         ]
     },
@@ -98,9 +104,10 @@ const normalRecipes = [
     {
         name: "베리 파이",
         image: "images/normal_09.png",
-        score: 20900,
+        score: 17170,
+        salePrice: 6930,
         ingredients: [
-            { icon: "🍓", name: "달콤한 열매의 정수", amount: 6 },
+            { icon: "🍓", name: "달콤한 열매의 정수", amount: 3 },
             { icon: "🌾", name: "밀의 정수", amount: 1 },
             { icon: "🪵", name: "나무의 정수", amount: 1 }
         ]
@@ -129,7 +136,7 @@ const normalRecipes = [
     {
         name: "사과 허브 빵",
         image: "images/normal_12.png",
-        score: 20100,
+        score: 26770,
         ingredients: [
             { icon: "🌾", name: "밀의 정수", amount: 1 },
             { icon: "🍎", name: "사과", amount: 4 },
@@ -150,19 +157,21 @@ const normalRecipes = [
     {
         name: "수박 볼",
         image: "images/normal_14.png",
-        score: 11300,
+        score: 5650,
+        salePrice: 3460,
         ingredients: [
-            { icon: "🍉", name: "수박 조각의 정수", amount: 6 },
-            { icon: "🍓", name: "달콤한 열매의 정수", amount: 6 }
+            { icon: "🍉", name: "수박 조각의 정수", amount: 3 },
+            { icon: "🍓", name: "달콤한 열매의 정수", amount: 3 }
         ]
     },
 
     {
         name: "수박 샤베트",
         image: "images/normal_15.png",
-        score: 7530,
+        score: 5610,
+        salePrice: 3440,
         ingredients: [
-            { icon: "🍉", name: "수박 조각의 정수", amount: 6 },
+            { icon: "🍉", name: "수박 조각의 정수", amount: 3 },
             { icon: "🌿", name: "사탕수수의 정수", amount: 2 }
         ]
     },
