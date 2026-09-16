@@ -288,7 +288,8 @@ const qualityRecipes = [
         score: 549000,
         ingredients: [
             { icon: "🥔", name: "고품질 감자", amount: 2 },
-            { icon: "🌿", name: "고품질 사탕수수", amount: 2 }
+            { icon: "🌿", name: "고품질 사탕수수", amount: 2 },
+            { icon: "🌿", name: "고품질 네더 사마귀", amount: 1 }
         ]
     },
 
@@ -2360,36 +2361,54 @@ function saveOwnedRecipesFromInputs() {
 
     document
         .querySelectorAll(
-            "#ownedRecipeInputs input[data-recipe-name]"
+            "#ownedRecipeInputs .owned-recipe-row"
         )
-        .forEach(function (input) {
+        .forEach(function (row) {
 
-            let value = parseInt(input.value, 10);
+            const name = row.dataset.recipeName;
+            const boxInput = row.querySelector("input[data-recipe-boxes]");
+            const setInput = row.querySelector("input[data-recipe-sets]");
+            const pieceInput = row.querySelector("input[data-recipe-pieces]");
 
-            if (isNaN(value) || value < 0) {
-                value = 0;
-            }
+            let boxes = parseInt(boxInput ? boxInput.value : 0, 10);
+            let sets = parseInt(setInput ? setInput.value : 0, 10);
+            let pieces = parseInt(pieceInput ? pieceInput.value : 0, 10);
 
-            value = Math.floor(value);
-            input.value = value;
-            owned[input.dataset.recipeName] = value;
+            if (isNaN(boxes) || boxes < 0) boxes = 0;
+            if (isNaN(sets) || sets < 0) sets = 0;
+            if (isNaN(pieces) || pieces < 0) pieces = 0;
+
+            boxes = Math.floor(boxes);
+            sets = Math.floor(sets);
+            pieces = Math.floor(pieces);
+
+            // 낱개 64개 = 1세트
+            sets += Math.floor(pieces / 64);
+            pieces = pieces % 64;
+
+            // 세트 54세트 = 1큰상자(3456개)
+            boxes += Math.floor(sets / 54);
+            sets = sets % 54;
+
+            if (boxInput) boxInput.value = boxes;
+            if (setInput) setInput.value = sets;
+            if (pieceInput) pieceInput.value = pieces;
+
+            owned[name] = {
+                boxes: boxes,
+                sets: sets,
+                pieces: pieces
+            };
 
         });
 
     try {
-
         localStorage.setItem(
             NORI_OWNED_RECIPE_STORAGE_KEY,
             JSON.stringify(owned)
         );
-
     } catch (error) {
-
-        console.warn(
-            "보유 요리를 저장하지 못했습니다.",
-            error
-        );
-
+        console.warn("보유 요리 저장값을 저장하지 못했습니다.", error);
     }
 
 }
@@ -2402,20 +2421,41 @@ function calculateOwnedRecipeScore() {
 
     document
         .querySelectorAll(
-            "#ownedRecipeInputs input[data-recipe-name]"
+            "#ownedRecipeInputs .owned-recipe-row"
         )
-        .forEach(function (input) {
+        .forEach(function (row) {
 
-            let count = parseInt(input.value, 10);
+            const boxInput = row.querySelector("input[data-recipe-boxes]");
+            const setInput = row.querySelector("input[data-recipe-sets]");
+            const pieceInput = row.querySelector("input[data-recipe-pieces]");
 
-            if (isNaN(count) || count < 0) {
-                count = 0;
-            }
+            let boxes = parseInt(boxInput ? boxInput.value : 0, 10);
+            let sets = parseInt(setInput ? setInput.value : 0, 10);
+            let pieces = parseInt(pieceInput ? pieceInput.value : 0, 10);
 
-            count = Math.floor(count);
-            input.value = count;
+            if (isNaN(boxes) || boxes < 0) boxes = 0;
+            if (isNaN(sets) || sets < 0) sets = 0;
+            if (isNaN(pieces) || pieces < 0) pieces = 0;
 
-            const score = Number(input.dataset.recipeScore || 0);
+            boxes = Math.floor(boxes);
+            sets = Math.floor(sets);
+            pieces = Math.floor(pieces);
+
+            // 낱개 64개 = 1세트
+            sets += Math.floor(pieces / 64);
+            pieces = pieces % 64;
+
+            // 세트 54세트 = 1큰상자(3456개)
+            boxes += Math.floor(sets / 54);
+            sets = sets % 54;
+
+            if (boxInput) boxInput.value = boxes;
+            if (setInput) setInput.value = sets;
+            if (pieceInput) pieceInput.value = pieces;
+
+            // 1큰상자 = 54세트 = 3456개
+            const count = (boxes * 3456) + (sets * 64) + pieces;
+            const score = Number(row.dataset.recipeScore || 0);
 
             totalCount += count;
             totalScore += score * count;
@@ -2439,7 +2479,6 @@ function calculateOwnedRecipeScore() {
     }
 
     return totalScore;
-
 }
 
 
@@ -2466,6 +2505,29 @@ function createOwnedRecipeScoreCalculator() {
                 grid-template-columns:1fr !important;
             }
         }
+        .owned-recipe-row .owned-recipe-input {
+            width:58px;
+            min-width:58px;
+            padding:7px 5px;
+            border:1px solid #aaa;
+            border-radius:7px;
+            box-sizing:border-box;
+            text-align:center;
+        }
+        .owned-recipe-row .owned-recipe-input-label {
+            font-size:10px;
+            color:#666;
+            display:block;
+            text-align:center;
+            margin-bottom:2px;
+            white-space:nowrap;
+        }
+        @media (max-width: 1200px) {
+            .owned-recipe-row .owned-recipe-input {
+                width:50px;
+                min-width:50px;
+            }
+        }
     `;
     document.head.appendChild(responsiveStyle);
 
@@ -2474,6 +2536,10 @@ function createOwnedRecipeScoreCalculator() {
     getAllRecipes().forEach(function (recipe) {
 
         const row = document.createElement("label");
+
+        row.className = "owned-recipe-row";
+        row.dataset.recipeName = recipe.name;
+        row.dataset.recipeScore = recipe.score;
 
         row.style.cssText = `
             display:flex;
@@ -2490,8 +2556,27 @@ function createOwnedRecipeScoreCalculator() {
             overflow:hidden;
         `;
 
-        const savedCount =
-            Number(saved[recipe.name] || 0);
+        // 이전 저장값과 기존 세트/낱개 저장값을 모두 호환
+        let savedBoxes = 0;
+        let savedSets = 0;
+        let savedPieces = 0;
+        const savedValue = saved[recipe.name];
+
+        if (savedValue && typeof savedValue === "object") {
+            savedBoxes = Number(savedValue.boxes || 0);
+            savedSets = Number(savedValue.sets || 0);
+            savedPieces = Number(savedValue.pieces || 0);
+        } else {
+            const oldCount = Number(savedValue || 0);
+            savedBoxes = Math.floor(oldCount / 3456);
+            const remainder = oldCount % 3456;
+            savedSets = Math.floor(remainder / 64);
+            savedPieces = remainder % 64;
+        }
+
+        // 세트/낱개만 저장된 이전 버전의 값도 큰상자로 정규화
+        savedBoxes += Math.floor(savedSets / 54);
+        savedSets = savedSets % 54;
 
         row.innerHTML = `
             <span style="
@@ -2508,24 +2593,46 @@ function createOwnedRecipeScoreCalculator() {
                 </small>
             </span>
 
-            <input
-                type="number"
-                min="0"
-                step="1"
-                value="${savedCount}"
-                data-recipe-name="${recipe.name}"
-                data-recipe-score="${recipe.score}"
-                style="
-                    flex:0 0 82px;
-                    width:82px;
-                    min-width:0;
-                    margin-left:auto;
-                    padding:7px;
-                    border:1px solid #aaa;
-                    border-radius:7px;
-                    box-sizing:border-box;
-                "
-            >
+            <span style="display:flex;align-items:flex-end;gap:4px;flex:0 0 auto;">
+                <span>
+                    <span class="owned-recipe-input-label">큰상자</span>
+                    <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value="${savedBoxes}"
+                        data-recipe-boxes
+                        class="owned-recipe-input"
+                        aria-label="${recipe.name} 큰상자 수량"
+                    >
+                </span>
+                <span>
+                    <span class="owned-recipe-input-label">세트</span>
+                    <input
+                        type="number"
+                        min="0"
+                        max="53"
+                        step="1"
+                        value="${savedSets}"
+                        data-recipe-sets
+                        class="owned-recipe-input"
+                        aria-label="${recipe.name} 세트 수량"
+                    >
+                </span>
+                <span>
+                    <span class="owned-recipe-input-label">낱개</span>
+                    <input
+                        type="number"
+                        min="0"
+                        max="63"
+                        step="1"
+                        value="${savedPieces}"
+                        data-recipe-pieces
+                        class="owned-recipe-input"
+                        aria-label="${recipe.name} 낱개 수량"
+                    >
+                </span>
+            </span>
         `;
 
         inputsContainer.appendChild(row);
@@ -2533,39 +2640,30 @@ function createOwnedRecipeScoreCalculator() {
     });
 
     inputsContainer
-        .querySelectorAll("input[data-recipe-name]")
+        .querySelectorAll(".owned-recipe-row input")
         .forEach(function (input) {
-
             input.addEventListener("input", function () {
-                saveOwnedRecipesFromInputs();
                 calculateOwnedRecipeScore();
+                saveOwnedRecipesFromInputs();
             });
-
         });
 
     calculateOwnedRecipeScore();
+    saveOwnedRecipesFromInputs();
 
     const openButton =
         document.getElementById("openOwnedRecipeScore");
 
     if (openButton) {
-
         openButton.addEventListener("click", function () {
-
             const panel =
                 document.getElementById("ownedRecipeScorePanel");
-
-            if (!panel) {
-                return;
-            }
-
+            if (!panel) return;
             panel.style.display =
                 panel.style.display === "none"
                     ? "block"
                     : "none";
-
         });
-
     }
 
 }
