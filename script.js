@@ -288,8 +288,7 @@ const qualityRecipes = [
         score: 549000,
         ingredients: [
             { icon: "🥔", name: "고품질 감자", amount: 2 },
-            { icon: "🌿", name: "고품질 사탕수수", amount: 2 },
-            { icon: "🌿", name: "고품질 네더 사마귀", amount: 1 }
+            { icon: "🌿", name: "고품질 사탕수수", amount: 2 }
         ]
     },
 
@@ -873,11 +872,17 @@ function calculateRecipeScore(recipe) {
 
 
     // ======================================================
-    // 재료별 총 필요 개수
+    // 재료별 총 필요 개수 + 제작 원가 계산
     // ======================================================
 
     let totalIngredients =
         0;
+
+    // 가격 설정에서 입력한 재료/정수 단가를 가져옵니다.
+    // 예: 감자의 정수 1,800원 × 3개 = 5,400원
+    const prices = loadEssencePrices();
+    let unitCost = 0;
+    let missingPriceCount = 0;
 
 
     const ingredientHTML =
@@ -892,6 +897,13 @@ function calculateRecipeScore(recipe) {
 
                     totalIngredients +=
                         total;
+
+                    const price = Number(prices[ingredient.name] || 0);
+                    if (price > 0) {
+                        unitCost += price * Number(ingredient.amount || 0);
+                    } else {
+                        missingPriceCount++;
+                    }
 
 
                     return `
@@ -949,6 +961,19 @@ function calculateRecipeScore(recipe) {
         </div>
 
 
+        <div class="result-line">
+
+            <span>
+                1개 제작 원가
+            </span>
+
+            <strong style="color:#a45d16;">
+                ${unitCost > 0 ? formatNumber(unitCost) + "원" : "가격 미입력"}
+            </strong>
+
+        </div>
+
+
         <div class="required-title">
 
             📦 필요한 정수
@@ -970,6 +995,29 @@ function calculateRecipeScore(recipe) {
             ${formatNumber(totalScore)}점
 
         </div>
+
+        <div style="
+            margin-top:10px;
+            padding:12px;
+            border:2px solid #d3a45f;
+            border-radius:10px;
+            background:#fffaf0;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:10px;
+        ">
+            <span style="font-weight:700;">💰 총 제작 가격</span>
+            <strong style="font-size:18px;color:#a45d16;">
+                ${unitCost > 0 ? formatNumber(unitCost * count) + "원" : "가격 미입력"}
+            </strong>
+        </div>
+
+        ${missingPriceCount > 0 ? `
+            <div style="margin-top:8px;font-size:12px;color:#b36b00;">
+                ※ 가격을 입력하지 않은 재료는 총 제작 가격에 포함되지 않았습니다.
+            </div>
+        ` : ""}
 
     `;
 
@@ -1210,6 +1258,79 @@ function openModal(recipe) {
 
 
     // ======================================================
+    // 정수 가격 기준 원가 표시
+    // ======================================================
+
+    const oldPriceBox = document.getElementById("recipePriceBox");
+    if (oldPriceBox) oldPriceBox.remove();
+
+    const priceBox = document.createElement("div");
+    priceBox.id = "recipePriceBox";
+    priceBox.style.cssText = `
+        margin-top:14px;
+        padding:14px;
+        border:2px solid #d3a45f;
+        border-radius:12px;
+        background:#fffaf0;
+        box-sizing:border-box;
+    `;
+
+    const prices = loadEssencePrices();
+    let essenceCost = 0;
+    let pricedCount = 0;
+    let missingPriceCount = 0;
+
+    const priceLines = (recipe.ingredients || []).map(function (ingredient) {
+        const price = Number(prices[ingredient.name] || 0);
+        const amount = Number(ingredient.amount || 0);
+        const lineCost = price * amount;
+
+        if (price > 0) {
+            pricedCount++;
+            essenceCost += lineCost;
+        } else {
+            missingPriceCount++;
+        }
+
+        return `
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                gap:10px;
+                padding:5px 0;
+                border-bottom:1px solid rgba(0,0,0,.07);
+                font-size:14px;
+            ">
+                <span>${ingredient.icon} ${ingredient.name} × ${formatNumber(amount)}</span>
+                <strong>${price > 0 ? formatNumber(lineCost) + "원" : "가격 미입력"}</strong>
+            </div>
+        `;
+    }).filter(Boolean).join("");
+
+    priceBox.innerHTML = `
+        <div style="font-size:16px;font-weight:700;margin-bottom:8px;">💰 재료 가격 기준 원가</div>
+        ${priceLines || '<div style="font-size:14px;color:#777;">이 레시피에는 정수 재료가 없습니다.</div>'}
+        <div style="
+            margin-top:10px;
+            padding-top:10px;
+            border-top:2px solid #e0c58e;
+            display:flex;
+            justify-content:space-between;
+            font-size:16px;
+            font-weight:700;
+        ">
+            <span>총 재료 원가</span>
+            <strong style="color:#a45d16;">${formatNumber(essenceCost)}원</strong>
+        </div>
+        ${missingPriceCount > 0 ? `
+            <div style="margin-top:8px;font-size:12px;color:#b36b00;">
+                ※ 가격을 입력하지 않은 정수는 원가에 포함되지 않았습니다.
+            </div>
+        ` : ""}
+    `;
+
+
+    // ======================================================
     // 기존 계산기 제거
     // ======================================================
 
@@ -1273,6 +1394,10 @@ function openModal(recipe) {
             );
 
         }
+
+        modalContent.appendChild(
+            priceBox
+        );
 
         modalContent.appendChild(
             calculator
@@ -1514,6 +1639,165 @@ function calculateMaxCraftable(recipe, inventory) {
 }
 
 
+
+// ==========================================================
+// 정수 가격 설정
+// ==========================================================
+
+const ESSENCE_PRICE_STORAGE_KEY = "nori_recipe_essence_prices_v1";
+
+function getAllPriceableIngredients() {
+    const allRecipes = [
+        ...(Array.isArray(normalRecipes) ? normalRecipes : []),
+        ...(Array.isArray(qualityRecipes) ? qualityRecipes : [])
+    ];
+
+    const names = [];
+    const seen = new Set();
+
+    // 정수뿐 아니라 사과, 고품질 재료 등
+    // 레시피에 실제로 사용되는 모든 재료를 가격 설정 대상으로 포함합니다.
+    allRecipes.forEach(function (recipe) {
+        (recipe.ingredients || []).forEach(function (ingredient) {
+            if (ingredient.name && !seen.has(ingredient.name)) {
+                seen.add(ingredient.name);
+                names.push({
+                    name: ingredient.name,
+                    icon: ingredient.icon || "📦"
+                });
+            }
+        });
+    });
+
+    return names;
+}
+
+// 기존 함수명을 사용하는 코드와의 호환을 유지합니다.
+function getAllEssenceNames() {
+    return getAllPriceableIngredients();
+}
+
+function loadEssencePrices() {
+    try {
+        const saved = localStorage.getItem(ESSENCE_PRICE_STORAGE_KEY);
+        if (!saved) return {};
+        const parsed = JSON.parse(saved);
+        return parsed && typeof parsed === "object" ? parsed : {};
+    } catch (error) {
+        console.warn("정수 가격을 불러오지 못했습니다.", error);
+        return {};
+    }
+}
+
+function saveEssencePrices(prices) {
+    localStorage.setItem(ESSENCE_PRICE_STORAGE_KEY, JSON.stringify(prices));
+    window.noriEssencePrices = { ...prices };
+}
+
+window.noriEssencePrices = loadEssencePrices();
+
+function formatPriceInput(value) {
+    const digits = String(value ?? "").replace(/[^0-9]/g, "");
+    if (!digits) return "";
+    return Number(digits).toLocaleString("ko-KR");
+}
+
+function renderEssencePriceInputs() {
+    const container = document.getElementById("essencePriceInputs");
+    if (!container) return;
+
+    const prices = loadEssencePrices();
+    window.noriEssencePrices = { ...prices };
+    container.innerHTML = "";
+
+    getAllEssenceNames().forEach(function (item) {
+        const row = document.createElement("label");
+        row.style.cssText = `
+            display:flex;
+            align-items:center;
+            gap:8px;
+            min-width:0;
+            padding:10px;
+            border:1px solid #ddd;
+            border-radius:10px;
+            background:#fff;
+            box-sizing:border-box;
+        `;
+
+        const name = document.createElement("span");
+        name.textContent = `${item.icon} ${item.name}`;
+        name.style.cssText = "flex:1;min-width:0;font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.inputMode = "numeric";
+        input.dataset.essencePriceName = item.name;
+        input.placeholder = "0";
+        input.value = formatPriceInput(prices[item.name] || "");
+        input.style.cssText = "width:105px;max-width:35%;padding:8px;border:1px solid #bbb;border-radius:8px;text-align:right;font-size:14px;box-sizing:border-box;";
+
+        input.addEventListener("input", function () {
+            this.value = formatPriceInput(this.value);
+        });
+
+        row.appendChild(name);
+        row.appendChild(input);
+        container.appendChild(row);
+    });
+}
+
+function setupEssencePriceSettings() {
+    const button = document.getElementById("openEssencePriceSettings");
+    const panel = document.getElementById("essencePricePanel");
+    const saveButton = document.getElementById("saveEssencePrices");
+    const resetButton = document.getElementById("resetEssencePrices");
+    const message = document.getElementById("essencePriceSaveMessage");
+
+    if (!button || !panel) return;
+
+    button.addEventListener("click", function () {
+        const isOpen = panel.style.display !== "none";
+        panel.style.display = isOpen ? "none" : "block";
+        if (!isOpen) renderEssencePriceInputs();
+    });
+
+    if (saveButton) {
+        saveButton.addEventListener("click", function () {
+            const prices = {};
+
+            document.querySelectorAll("#essencePriceInputs input[data-essence-price-name]").forEach(function (input) {
+                const digits = String(input.value || "").replace(/[^0-9]/g, "");
+                prices[input.dataset.essencePriceName] = digits ? Number(digits) : 0;
+            });
+
+            saveEssencePrices(prices);
+
+            if (message) {
+                message.textContent = "✅ 정수 가격이 저장되었습니다.";
+                message.style.color = "#18a85c";
+                setTimeout(function () {
+                    message.textContent = "";
+                }, 2000);
+            }
+        });
+    }
+
+    if (resetButton) {
+        resetButton.addEventListener("click", function () {
+            if (!confirm("입력한 정수 가격을 모두 0으로 초기화할까요?")) return;
+
+            const prices = {};
+            saveEssencePrices(prices);
+            renderEssencePriceInputs();
+
+            if (message) {
+                message.textContent = "정수 가격이 초기화되었습니다.";
+                message.style.color = "#777";
+            }
+        });
+    }
+}
+
 function createInventoryFinder() {
 
     if (document.getElementById("inventoryFinder")) {
@@ -1571,6 +1855,47 @@ function createInventoryFinder() {
         >
             🍳 보유 요리로 점수 계산
         </button>
+
+        <button
+            id="openEssencePriceSettings"
+            type="button"
+            style="
+                width:100%;
+                margin-top:10px;
+                padding:14px 18px;
+                border:2px solid #18b86a;
+                border-radius:14px;
+                background:#18b86a;
+                color:white;
+                font-size:18px;
+                font-weight:700;
+                cursor:pointer;
+            "
+        >
+            💰 재료 가격 설정
+        </button>
+
+        <div
+            id="essencePricePanel"
+            style="
+                display:none;
+                margin-top:12px;
+                padding:18px;
+                border:2px solid #18b86a;
+                border-radius:16px;
+                background:rgba(255,255,255,.92);
+                box-sizing:border-box;
+            "
+        >
+            <div style="font-size:20px;font-weight:700;margin-bottom:8px;">💰 재료 가격 설정</div>
+            <div style="font-size:14px;margin-bottom:14px;line-height:1.5;">각 재료 1개의 가격을 직접 입력하세요.<br>정수, 사과, 고품질 재료 등 모든 레시피 재료의 가격을 설정할 수 있습니다. 입력한 가격은 이 브라우저에 자동으로 저장됩니다.</div>
+            <div id="essencePriceInputs" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;box-sizing:border-box;"></div>
+            <div style="display:flex;gap:8px;margin-top:14px;">
+                <button id="saveEssencePrices" type="button" style="flex:1;padding:12px;border:0;border-radius:12px;background:#18b86a;color:white;font-size:16px;font-weight:700;cursor:pointer;">💾 가격 저장</button>
+                <button id="resetEssencePrices" type="button" style="padding:12px 16px;border:2px solid #bbb;border-radius:12px;background:white;color:#555;font-size:15px;font-weight:700;cursor:pointer;">초기화</button>
+            </div>
+            <div id="essencePriceSaveMessage" style="margin-top:10px;text-align:center;font-size:14px;font-weight:700;"></div>
+        </div>
 
         <div
             id="ownedRecipeScorePanel"
@@ -2974,6 +3299,7 @@ document.addEventListener(
         // ==================================================
 
         createInventoryFinder();
+        setupEssencePriceSettings();
 
 
         // ==================================================
