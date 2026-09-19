@@ -288,8 +288,7 @@ const qualityRecipes = [
         score: 549000,
         ingredients: [
             { icon: "🥔", name: "고품질 감자", amount: 2 },
-            { icon: "🌿", name: "고품질 사탕수수", amount: 2 },
-            { icon: "🌿", name: "고품질 네더 사마귀", amount: 1 }
+            { icon: "🌿", name: "고품질 사탕수수", amount: 2 }
         ]
     },
 
@@ -1917,6 +1916,7 @@ function createInventoryFinder() {
                 margin-bottom:8px;
             ">
                 🍳 보유 요리 입력
+                <small style="display:block;font-size:11px;font-weight:400;opacity:.65;margin-top:3px;">64개 = 1세트 · 54세트 = 1큰상자(3,456개) · 입력 시 자동 정리</small>
             </div>
 
             <div style="
@@ -2355,6 +2355,45 @@ function loadSavedOwnedRecipes() {
 }
 
 
+// 보유 요리 수량을 큰상자 / 세트 / 낱개 형태로 자동 정리
+// 1큰상자 = 54세트 = 3,456개
+// 1세트 = 64개
+function normalizeOwnedRecipeRow(row) {
+
+    if (!row) return { boxes: 0, sets: 0, pieces: 0 };
+
+    const boxInput = row.querySelector("input[data-recipe-boxes]");
+    const setInput = row.querySelector("input[data-recipe-sets]");
+    const pieceInput = row.querySelector("input[data-recipe-pieces]");
+
+    let boxes = parseInt(boxInput ? boxInput.value : 0, 10);
+    let sets = parseInt(setInput ? setInput.value : 0, 10);
+    let pieces = parseInt(pieceInput ? pieceInput.value : 0, 10);
+
+    if (isNaN(boxes) || boxes < 0) boxes = 0;
+    if (isNaN(sets) || sets < 0) sets = 0;
+    if (isNaN(pieces) || pieces < 0) pieces = 0;
+
+    boxes = Math.floor(boxes);
+    sets = Math.floor(sets);
+    pieces = Math.floor(pieces);
+
+    // 낱개가 64개 이상이면 세트로 자동 변환
+    sets += Math.floor(pieces / 64);
+    pieces = pieces % 64;
+
+    // 세트가 54개 이상이면 큰상자로 자동 변환
+    boxes += Math.floor(sets / 54);
+    sets = sets % 54;
+
+    if (boxInput) boxInput.value = boxes;
+    if (setInput) setInput.value = sets;
+    if (pieceInput) pieceInput.value = pieces;
+
+    return { boxes, sets, pieces };
+}
+
+
 function saveOwnedRecipesFromInputs() {
 
     const owned = {};
@@ -2366,39 +2405,9 @@ function saveOwnedRecipesFromInputs() {
         .forEach(function (row) {
 
             const name = row.dataset.recipeName;
-            const boxInput = row.querySelector("input[data-recipe-boxes]");
-            const setInput = row.querySelector("input[data-recipe-sets]");
-            const pieceInput = row.querySelector("input[data-recipe-pieces]");
+            const normalized = normalizeOwnedRecipeRow(row);
 
-            let boxes = parseInt(boxInput ? boxInput.value : 0, 10);
-            let sets = parseInt(setInput ? setInput.value : 0, 10);
-            let pieces = parseInt(pieceInput ? pieceInput.value : 0, 10);
-
-            if (isNaN(boxes) || boxes < 0) boxes = 0;
-            if (isNaN(sets) || sets < 0) sets = 0;
-            if (isNaN(pieces) || pieces < 0) pieces = 0;
-
-            boxes = Math.floor(boxes);
-            sets = Math.floor(sets);
-            pieces = Math.floor(pieces);
-
-            // 낱개 64개 = 1세트
-            sets += Math.floor(pieces / 64);
-            pieces = pieces % 64;
-
-            // 세트 54세트 = 1큰상자(3456개)
-            boxes += Math.floor(sets / 54);
-            sets = sets % 54;
-
-            if (boxInput) boxInput.value = boxes;
-            if (setInput) setInput.value = sets;
-            if (pieceInput) pieceInput.value = pieces;
-
-            owned[name] = {
-                boxes: boxes,
-                sets: sets,
-                pieces: pieces
-            };
+            owned[name] = normalized;
 
         });
 
@@ -2429,29 +2438,11 @@ function calculateOwnedRecipeScore() {
             const setInput = row.querySelector("input[data-recipe-sets]");
             const pieceInput = row.querySelector("input[data-recipe-pieces]");
 
-            let boxes = parseInt(boxInput ? boxInput.value : 0, 10);
-            let sets = parseInt(setInput ? setInput.value : 0, 10);
-            let pieces = parseInt(pieceInput ? pieceInput.value : 0, 10);
+            const normalized = normalizeOwnedRecipeRow(row);
 
-            if (isNaN(boxes) || boxes < 0) boxes = 0;
-            if (isNaN(sets) || sets < 0) sets = 0;
-            if (isNaN(pieces) || pieces < 0) pieces = 0;
-
-            boxes = Math.floor(boxes);
-            sets = Math.floor(sets);
-            pieces = Math.floor(pieces);
-
-            // 낱개 64개 = 1세트
-            sets += Math.floor(pieces / 64);
-            pieces = pieces % 64;
-
-            // 세트 54세트 = 1큰상자(3456개)
-            boxes += Math.floor(sets / 54);
-            sets = sets % 54;
-
-            if (boxInput) boxInput.value = boxes;
-            if (setInput) setInput.value = sets;
-            if (pieceInput) pieceInput.value = pieces;
+            const boxes = normalized.boxes;
+            const sets = normalized.sets;
+            const pieces = normalized.pieces;
 
             // 1큰상자 = 54세트 = 3456개
             const count = (boxes * 3456) + (sets * 64) + pieces;
@@ -2642,7 +2633,28 @@ function createOwnedRecipeScoreCalculator() {
     inputsContainer
         .querySelectorAll(".owned-recipe-row input")
         .forEach(function (input) {
+
+            // 입력하는 즉시 수량을 자동 정리합니다.
+            // 예: 낱개 64 → 세트 +1, 낱개 100 → 세트 +1 + 낱개 36
+            // 예: 세트 54 → 큰상자 +1, 세트 60 → 큰상자 +1 + 세트 6
             input.addEventListener("input", function () {
+                const row = input.closest(".owned-recipe-row");
+                normalizeOwnedRecipeRow(row);
+                calculateOwnedRecipeScore();
+                saveOwnedRecipesFromInputs();
+            });
+
+            // 키보드로 입력을 끝낸 뒤에도 한 번 더 정리합니다.
+            input.addEventListener("change", function () {
+                const row = input.closest(".owned-recipe-row");
+                normalizeOwnedRecipeRow(row);
+                calculateOwnedRecipeScore();
+                saveOwnedRecipesFromInputs();
+            });
+
+            input.addEventListener("blur", function () {
+                const row = input.closest(".owned-recipe-row");
+                normalizeOwnedRecipeRow(row);
                 calculateOwnedRecipeScore();
                 saveOwnedRecipesFromInputs();
             });
