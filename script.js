@@ -13,7 +13,6 @@ const normalRecipes = [
         name: "감자 구이",
         image: "images/normal_01.png",
         score: 7210,
-        salePrice: 4210,
         ingredients: [
             { icon: "🥔", name: "감자의 정수", amount: 3 },
             { icon: "🪵", name: "나무의 정수", amount: 1 }
@@ -24,7 +23,6 @@ const normalRecipes = [
         name: "감자 팬케이크",
         image: "images/normal_02.png",
         score: 16100,
-        salePrice: 6290,
         ingredients: [
             { icon: "🥔", name: "감자의 정수", amount: 3 },
             { icon: "🌾", name: "밀의 정수", amount: 1 },
@@ -36,7 +34,6 @@ const normalRecipes = [
         name: "달콤 당근 스튜",
         image: "images/normal_03.png",
         score: 11230,
-        salePrice: 6590,
         ingredients: [
             { icon: "🥕", name: "당근의 정수", amount: 3 },
             { icon: "🌿", name: "사탕수수의 정수", amount: 1 },
@@ -48,7 +45,6 @@ const normalRecipes = [
         name: "당근 빵",
         image: "images/normal_04.png",
         score: 16420,
-        salePrice: 6500,
         ingredients: [
             { icon: "🥕", name: "당근의 정수", amount: 3 },
             { icon: "🌾", name: "밀의 정수", amount: 1 },
@@ -71,7 +67,6 @@ const normalRecipes = [
         name: "루비 비트 샐러드",
         image: "images/normal_06.png",
         score: 35550,
-        salePrice: 6520,
         ingredients: [
             { icon: "🟣", name: "비트의 정수", amount: 1 },
             { icon: "🍎", name: "사과", amount: 8 }
@@ -94,7 +89,6 @@ const normalRecipes = [
         name: "베리 파르페",
         image: "images/normal_08.png",
         score: 7430,
-        salePrice: 4350,
         ingredients: [
             { icon: "🍓", name: "달콤한 열매의 정수", amount: 3 },
             { icon: "🌿", name: "사탕수수의 정수", amount: 2 }
@@ -105,7 +99,6 @@ const normalRecipes = [
         name: "베리 파이",
         image: "images/normal_09.png",
         score: 17170,
-        salePrice: 6930,
         ingredients: [
             { icon: "🍓", name: "달콤한 열매의 정수", amount: 3 },
             { icon: "🌾", name: "밀의 정수", amount: 1 },
@@ -158,7 +151,6 @@ const normalRecipes = [
         name: "수박 볼",
         image: "images/normal_14.png",
         score: 5650,
-        salePrice: 3460,
         ingredients: [
             { icon: "🍉", name: "수박 조각의 정수", amount: 3 },
             { icon: "🍓", name: "달콤한 열매의 정수", amount: 3 }
@@ -169,7 +161,6 @@ const normalRecipes = [
         name: "수박 샤베트",
         image: "images/normal_15.png",
         score: 5610,
-        salePrice: 3440,
         ingredients: [
             { icon: "🍉", name: "수박 조각의 정수", amount: 3 },
             { icon: "🌿", name: "사탕수수의 정수", amount: 2 }
@@ -702,6 +693,7 @@ function createCalculator(recipe) {
 
     calculator.id =
         "recipeCalculator";
+    calculator.className = "recipe-calculator";
 
 
     calculator.innerHTML = `
@@ -930,6 +922,19 @@ function calculateRecipeScore(recipe) {
 
 
     // ======================================================
+    // 개인 판매가격 / 수수료 계산
+    // ======================================================
+
+    const salePrices = loadRecipeSalePrices();
+    const salePrice = Number(salePrices[recipe.name] || 0);
+    const userFee = loadUserFee();
+    const grossSales = salePrice * count;
+    const feeAmount = grossSales * (userFee / 100);
+    const netSales = grossSales - feeAmount;
+    const totalCost = unitCost * count;
+    const totalProfit = netSales - totalCost;
+
+    // ======================================================
     // 결과 출력
     // ======================================================
 
@@ -974,6 +979,16 @@ function calculateRecipeScore(recipe) {
         </div>
 
 
+        <div class="result-line">
+            <span>개당 판매가격</span>
+            <strong style="color:#1d6fa5;">${salePrice > 0 ? formatNumber(salePrice) + "원" : "가격 미입력"}</strong>
+        </div>
+
+        <div class="result-line">
+            <span>개인 수수료</span>
+            <strong>${formatNumber(userFee)}%</strong>
+        </div>
+
         <div class="required-title">
 
             📦 필요한 정수
@@ -1010,6 +1025,40 @@ function calculateRecipeScore(recipe) {
             <span style="font-weight:700;">💰 총 제작 가격</span>
             <strong style="font-size:18px;color:#a45d16;">
                 ${unitCost > 0 ? formatNumber(unitCost * count) + "원" : "가격 미입력"}
+            </strong>
+        </div>
+
+        <div style="
+            margin-top:8px;
+            padding:12px;
+            border:2px solid #72a8c9;
+            border-radius:10px;
+            background:#f3faff;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:10px;
+        ">
+            <span style="font-weight:700;">💵 총 판매 가격 (수수료 차감 후)</span>
+            <strong style="font-size:18px;color:#1d6fa5;">
+                ${salePrice > 0 ? formatNumber(netSales) + "원" : "가격 미입력"}
+            </strong>
+        </div>
+
+        <div style="
+            margin-top:8px;
+            padding:12px;
+            border:2px solid ${totalProfit >= 0 ? '#72bf91' : '#d58a8a'};
+            border-radius:10px;
+            background:${totalProfit >= 0 ? '#f2fff7' : '#fff5f5'};
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:10px;
+        ">
+            <span style="font-weight:700;">📈 총 순이익</span>
+            <strong style="font-size:18px;color:${totalProfit >= 0 ? '#138a4d' : '#c23b3b'};">
+                ${salePrice > 0 ? formatNumber(totalProfit) + "원" : "가격 미입력"}
             </strong>
         </div>
 
@@ -1266,6 +1315,7 @@ function openModal(recipe) {
 
     const priceBox = document.createElement("div");
     priceBox.id = "recipePriceBox";
+    priceBox.className = "recipe-price-box";
     priceBox.style.cssText = `
         margin-top:14px;
         padding:14px;
@@ -1307,6 +1357,13 @@ function openModal(recipe) {
         `;
     }).filter(Boolean).join("");
 
+    const salePrices = loadRecipeSalePrices();
+    const salePrice = Number(salePrices[recipe.name] || 0);
+    const userFee = loadUserFee();
+    const feePerItem = salePrice * (userFee / 100);
+    const netSalePerItem = salePrice - feePerItem;
+    const profitPerItem = netSalePerItem - essenceCost;
+
     priceBox.innerHTML = `
         <div style="font-size:16px;font-weight:700;margin-bottom:8px;">💰 재료 가격 기준 원가</div>
         ${priceLines || '<div style="font-size:14px;color:#777;">이 레시피에는 정수 재료가 없습니다.</div>'}
@@ -1324,9 +1381,18 @@ function openModal(recipe) {
         </div>
         ${missingPriceCount > 0 ? `
             <div style="margin-top:8px;font-size:12px;color:#b36b00;">
-                ※ 가격을 입력하지 않은 정수는 원가에 포함되지 않았습니다.
+                ※ 가격을 입력하지 않은 재료는 원가에 포함되지 않았습니다.
             </div>
         ` : ""}
+
+        <div style="margin-top:12px;padding-top:10px;border-top:2px solid #e0c58e;">
+            <div style="font-size:16px;font-weight:700;margin-bottom:6px;">💵 개인 판매 기준</div>
+            <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;"><span>판매가격</span><strong>${salePrice > 0 ? formatNumber(salePrice) + "원" : "가격 미입력"}</strong></div>
+            <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;"><span>개인 수수료</span><strong>${formatNumber(userFee)}%</strong></div>
+            <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;"><span>수수료 금액</span><strong>${salePrice > 0 ? formatNumber(feePerItem) + "원" : "-"}</strong></div>
+            <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;"><span>수수료 차감 후</span><strong style="color:#138a4d;">${salePrice > 0 ? formatNumber(netSalePerItem) + "원" : "가격 미입력"}</strong></div>
+            <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:15px;font-weight:700;"><span>1개 순이익</span><strong style="color:${profitPerItem >= 0 ? "#138a4d" : "#c23b3b"};">${salePrice > 0 ? formatNumber(profitPerItem) + "원" : "가격 미입력"}</strong></div>
+        </div>
     `;
 
 
@@ -1646,6 +1712,114 @@ function calculateMaxCraftable(recipe, inventory) {
 
 const ESSENCE_PRICE_STORAGE_KEY = "nori_recipe_essence_prices_v1";
 
+
+// ==========================================================
+// 개인 판매가격 / 수수료 설정
+// ==========================================================
+
+const RECIPE_SALE_PRICE_STORAGE_KEY = "nori_recipe_sale_prices_v1";
+const USER_FEE_STORAGE_KEY = "nori_recipe_user_fee_v1";
+
+function loadRecipeSalePrices() {
+    try {
+        const saved = localStorage.getItem(RECIPE_SALE_PRICE_STORAGE_KEY);
+        if (!saved) return {};
+        const parsed = JSON.parse(saved);
+        return parsed && typeof parsed === "object" ? parsed : {};
+    } catch (error) {
+        console.warn("개인 판매가격을 불러오지 못했습니다.", error);
+        return {};
+    }
+}
+
+function saveRecipeSalePrices(prices) {
+    localStorage.setItem(RECIPE_SALE_PRICE_STORAGE_KEY, JSON.stringify(prices));
+    window.noriRecipeSalePrices = { ...prices };
+}
+
+function loadUserFee() {
+    try {
+        const saved = localStorage.getItem(USER_FEE_STORAGE_KEY);
+        if (saved === null) return 0;
+        const value = Number(saved);
+        if (!Number.isFinite(value) || value < 0) return 0;
+        return Math.min(100, value);
+    } catch (error) {
+        console.warn("개인 수수료를 불러오지 못했습니다.", error);
+        return 0;
+    }
+}
+
+function saveUserFee(fee) {
+    const value = Number(fee);
+    const normalized = Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 0;
+    localStorage.setItem(USER_FEE_STORAGE_KEY, String(normalized));
+    window.noriUserFee = normalized;
+}
+
+window.noriRecipeSalePrices = loadRecipeSalePrices();
+window.noriUserFee = loadUserFee();
+
+function formatPercentInput(value) {
+    const digits = String(value ?? "").replace(/[^0-9.]/g, "");
+    if (!digits) return "";
+    const num = Number(digits);
+    if (!Number.isFinite(num)) return "";
+    return String(Math.min(100, Math.max(0, num)));
+}
+
+function renderRecipeSalePriceInputs() {
+    const container = document.getElementById("recipeSalePriceInputs");
+    const feeInput = document.getElementById("userFeeInput");
+    if (!container) return;
+
+    const prices = loadRecipeSalePrices();
+    const fee = loadUserFee();
+    window.noriRecipeSalePrices = { ...prices };
+    window.noriUserFee = fee;
+
+    container.innerHTML = "";
+
+    getAllRecipes().forEach(function (recipe) {
+        const row = document.createElement("label");
+        row.style.cssText = `
+            display:flex;
+            align-items:center;
+            gap:8px;
+            min-width:0;
+            padding:10px;
+            border:1px solid #e4d1ad;
+            border-radius:10px;
+            background:#fffaf0;
+            box-sizing:border-box;
+        `;
+
+        const name = document.createElement("span");
+        name.textContent = recipe.name;
+        name.style.cssText = "flex:1;min-width:0;font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.inputMode = "numeric";
+        input.dataset.salePriceName = recipe.name;
+        input.placeholder = "판매가격";
+        input.value = formatPriceInput(prices[recipe.name] || "");
+        input.style.cssText = "width:105px;max-width:42%;padding:8px;border:1px solid #bbb;border-radius:8px;text-align:right;font-size:14px;box-sizing:border-box;";
+
+        input.addEventListener("input", function () {
+            this.value = formatPriceInput(this.value);
+        });
+
+        row.appendChild(name);
+        row.appendChild(input);
+        container.appendChild(row);
+    });
+
+    if (feeInput) {
+        feeInput.value = fee ? String(fee) : "";
+    }
+}
+
 function getAllPriceableIngredients() {
     const allRecipes = [
         ...(Array.isArray(normalRecipes) ? normalRecipes : []),
@@ -1758,26 +1932,40 @@ function setupEssencePriceSettings() {
     button.addEventListener("click", function () {
         const isOpen = panel.style.display !== "none";
         panel.style.display = isOpen ? "none" : "block";
-        if (!isOpen) renderEssencePriceInputs();
+        if (!isOpen) {
+            renderEssencePriceInputs();
+            renderRecipeSalePriceInputs();
+        }
     });
 
     if (saveButton) {
         saveButton.addEventListener("click", function () {
             const prices = {};
+            const salePrices = {};
 
             document.querySelectorAll("#essencePriceInputs input[data-essence-price-name]").forEach(function (input) {
                 const digits = String(input.value || "").replace(/[^0-9]/g, "");
                 prices[input.dataset.essencePriceName] = digits ? Number(digits) : 0;
             });
 
+            document.querySelectorAll("#recipeSalePriceInputs input[data-sale-price-name]").forEach(function (input) {
+                const digits = String(input.value || "").replace(/[^0-9]/g, "");
+                salePrices[input.dataset.salePriceName] = digits ? Number(digits) : 0;
+            });
+
+            const feeInput = document.getElementById("userFeeInput");
+            const fee = feeInput ? formatPercentInput(feeInput.value) : "0";
+
             saveEssencePrices(prices);
+            saveRecipeSalePrices(salePrices);
+            saveUserFee(fee || 0);
 
             if (message) {
-                message.textContent = "✅ 정수 가격이 저장되었습니다.";
+                message.textContent = "✅ 재료 가격, 판매가격, 개인 수수료가 저장되었습니다.";
                 message.style.color = "#18a85c";
                 setTimeout(function () {
                     message.textContent = "";
-                }, 2000);
+                }, 2500);
             }
         });
     }
@@ -1787,11 +1975,15 @@ function setupEssencePriceSettings() {
             if (!confirm("입력한 정수 가격을 모두 0으로 초기화할까요?")) return;
 
             const prices = {};
+            const salePrices = {};
             saveEssencePrices(prices);
+            saveRecipeSalePrices(salePrices);
+            saveUserFee(0);
             renderEssencePriceInputs();
+            renderRecipeSalePriceInputs();
 
             if (message) {
-                message.textContent = "정수 가격이 초기화되었습니다.";
+                message.textContent = "재료 가격, 판매가격, 개인 수수료가 초기화되었습니다.";
                 message.style.color = "#777";
             }
         });
@@ -1890,6 +2082,18 @@ function createInventoryFinder() {
             <div style="font-size:20px;font-weight:700;margin-bottom:8px;">💰 재료 가격 설정</div>
             <div style="font-size:14px;margin-bottom:14px;line-height:1.5;">각 재료 1개의 가격을 직접 입력하세요.<br>정수, 사과, 고품질 재료 등 모든 레시피 재료의 가격을 설정할 수 있습니다. 입력한 가격은 이 브라우저에 자동으로 저장됩니다.</div>
             <div id="essencePriceInputs" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;box-sizing:border-box;"></div>
+
+            <div style="margin-top:18px;padding-top:16px;border-top:2px solid #ead8b7;">
+                <div style="font-size:18px;font-weight:700;margin-bottom:6px;">💵 개인 판매가격 / 수수료</div>
+                <div style="font-size:13px;color:#666;line-height:1.5;margin-bottom:10px;">요리별 판매가격과 본인에게 적용되는 수수료를 직접 입력하세요. 입력값은 이 브라우저에 자동 저장됩니다.</div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                    <label for="userFeeInput" style="font-weight:700;white-space:nowrap;">개인 수수료</label>
+                    <input id="userFeeInput" type="text" inputmode="decimal" placeholder="0" style="width:90px;padding:8px;border:1px solid #bbb;border-radius:8px;text-align:right;box-sizing:border-box;">
+                    <span>%</span>
+                </div>
+                <div id="recipeSalePriceInputs" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;box-sizing:border-box;"></div>
+            </div>
+
             <div style="display:flex;gap:8px;margin-top:14px;">
                 <button id="saveEssencePrices" type="button" style="flex:1;padding:12px;border:0;border-radius:12px;background:#18b86a;color:white;font-size:16px;font-weight:700;cursor:pointer;">💾 가격 저장</button>
                 <button id="resetEssencePrices" type="button" style="padding:12px 16px;border:2px solid #bbb;border-radius:12px;background:white;color:#555;font-size:15px;font-weight:700;cursor:pointer;">초기화</button>
