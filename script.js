@@ -1063,6 +1063,23 @@ function calculateRecipeScore(recipe) {
             </strong>
         </div>
 
+        <div style="
+            margin-top:8px;
+            padding:12px;
+            border:2px solid ${totalProfit >= 0 ? '#8aa6d5' : '#d58a8a'};
+            border-radius:10px;
+            background:${totalProfit >= 0 ? '#f5f8ff' : '#fff5f5'};
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:10px;
+        ">
+            <span style="font-weight:700;">📊 수익률 (마진율)</span>
+            <strong style="font-size:18px;color:${totalProfit >= 0 ? '#2468a8' : '#c23b3b'};">
+                ${salePrice > 0 && netSales > 0 ? ((totalProfit / netSales) * 100).toFixed(2) + "%" : "가격 미입력"}
+            </strong>
+        </div>
+
         ${missingPriceCount > 0 ? `
             <div style="margin-top:8px;font-size:12px;color:#b36b00;">
                 ※ 가격을 입력하지 않은 재료는 총 제작 가격에 포함되지 않았습니다.
