@@ -1990,18 +1990,25 @@ function setupEssencePriceSettings() {
 
     if (resetButton) {
         resetButton.addEventListener("click", function () {
-            if (!confirm("입력한 정수 가격을 모두 0으로 초기화할까요?")) return;
-
-            const prices = {};
-            const salePrices = {};
-            saveEssencePrices(prices);
-            saveRecipeSalePrices(salePrices);
-            saveUserFee(0);
+            if (!confirm("입력한 재료 가격만 초기화할까요?\n판매가격과 수수료는 유지됩니다.")) return;
+            saveEssencePrices({});
             renderEssencePriceInputs();
-            renderRecipeSalePriceInputs();
-
             if (message) {
-                message.textContent = "재료 가격, 판매가격, 개인 수수료가 초기화되었습니다.";
+                message.textContent = "재료 가격이 초기화되었습니다.";
+                message.style.color = "#777";
+            }
+        });
+    }
+
+    const resetSalePriceButton = document.getElementById("resetSalePriceData");
+    if (resetSalePriceButton) {
+        resetSalePriceButton.addEventListener("click", function () {
+            if (!confirm("개인 판매가격과 수수료만 초기화할까요?\n재료 가격은 유지됩니다.")) return;
+            saveRecipeSalePrices({});
+            saveUserFee(0);
+            renderRecipeSalePriceInputs();
+            if (message) {
+                message.textContent = "개인 판매가격과 수수료가 초기화되었습니다.";
                 message.style.color = "#777";
             }
         });
@@ -2114,7 +2121,8 @@ function createInventoryFinder() {
 
             <div style="display:flex;gap:8px;margin-top:14px;">
                 <button id="saveEssencePrices" type="button" style="flex:1;padding:12px;border:0;border-radius:12px;background:#18b86a;color:white;font-size:16px;font-weight:700;cursor:pointer;">💾 가격 저장</button>
-                <button id="resetEssencePrices" type="button" style="padding:12px 16px;border:2px solid #bbb;border-radius:12px;background:white;color:#555;font-size:15px;font-weight:700;cursor:pointer;">초기화</button>
+                <button id="resetEssencePrices" type="button" style="padding:12px 16px;border:2px solid #bbb;border-radius:12px;background:white;color:#555;font-size:15px;font-weight:700;cursor:pointer;">재료 가격 초기화</button>
+                <button id="resetSalePriceData" type="button" style="padding:12px 16px;border:2px solid #bbb;border-radius:12px;background:white;color:#555;font-size:15px;font-weight:700;cursor:pointer;">판매가격/수수료 초기화</button>
             </div>
             <div id="essencePriceSaveMessage" style="margin-top:10px;text-align:center;font-size:14px;font-weight:700;"></div>
         </div>
@@ -2184,6 +2192,12 @@ function createInventoryFinder() {
                 </div>
             </div>
 
+            <button
+                id="resetOwnedRecipeData"
+                type="button"
+                style="width:100%;margin-top:10px;padding:10px;border:2px solid #bbb;border-radius:12px;background:white;color:#555;font-size:14px;font-weight:700;cursor:pointer;"
+            >🔄 보유 요리 입력 초기화</button>
+
         </div>
 
         <div
@@ -2229,6 +2243,12 @@ function createInventoryFinder() {
             ></div>
 
             <button
+                id="resetInventoryData"
+                type="button"
+                style="width:100%;margin-top:8px;padding:10px;border:2px solid #bbb;border-radius:12px;background:white;color:#555;font-size:14px;font-weight:700;cursor:pointer;"
+            >🔄 보유 정수 입력 초기화</button>
+
+            <button
                 id="findCraftableRecipes"
                 type="button"
                 style="
@@ -2249,6 +2269,18 @@ function createInventoryFinder() {
 
             <div id="craftableResults"></div>
 
+        </div>
+
+        <div id="dataManagementPanel" style="margin-top:12px;padding:18px;border:2px solid #18b86a;border-radius:16px;background:rgba(255,255,255,.92);box-sizing:border-box;">
+            <div style="font-size:20px;font-weight:700;margin-bottom:6px;">💾 데이터 저장 / 불러오기</div>
+            <div style="font-size:14px;line-height:1.5;color:#666;margin-bottom:12px;">보유 정수, 보유 요리, 재료 가격, 개인 판매가격, 개인 수수료를 파일 하나로 저장하거나 불러올 수 있습니다.</div>
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;">
+                <button id="exportNoriData" type="button" style="padding:12px;border:0;border-radius:12px;background:#18b86a;color:white;font-size:15px;font-weight:700;cursor:pointer;">💾 데이터 저장</button>
+                <button id="importNoriData" type="button" style="padding:12px;border:2px solid #18b86a;border-radius:12px;background:white;color:#168a50;font-size:15px;font-weight:700;cursor:pointer;">📂 데이터 불러오기</button>
+                <button id="resetAllNoriData" type="button" style="padding:12px;border:2px solid #b44;border-radius:12px;background:white;color:#a33;font-size:15px;font-weight:700;cursor:pointer;">⚠️ 전체 데이터 초기화</button>
+            </div>
+            <input id="importNoriDataFile" type="file" accept="application/json,.json" style="display:none;">
+            <div id="dataManagementMessage" style="margin-top:10px;text-align:center;font-size:14px;font-weight:700;"></div>
         </div>
     `;
 
@@ -2367,6 +2399,156 @@ function createInventoryFinder() {
                     : "none";
 
         });
+
+    // ==========================================================
+    // 개별 초기화 / 데이터 저장·불러오기
+    // ==========================================================
+
+    function clearInventoryData() {
+        localStorage.removeItem(NORI_INVENTORY_STORAGE_KEY);
+        document.querySelectorAll("#inventoryInputs input[data-ingredient]").forEach(function (input) {
+            input.value = "";
+        });
+        const result = document.getElementById("craftableResults");
+        if (result) result.innerHTML = "";
+    }
+
+    function clearOwnedRecipeData() {
+        localStorage.removeItem(NORI_OWNED_RECIPE_STORAGE_KEY);
+        document.querySelectorAll("#ownedRecipeInputs input").forEach(function (input) {
+            input.value = "";
+        });
+        if (typeof calculateOwnedRecipeScore === "function") calculateOwnedRecipeScore();
+    }
+
+    function getNoriBackupData() {
+        return {
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            essencePrices: loadEssencePrices(),
+            recipeSalePrices: loadRecipeSalePrices(),
+            userFee: loadUserFee(),
+            inventory: loadSavedInventory(),
+            ownedRecipes: loadSavedOwnedRecipes()
+        };
+    }
+
+    function refreshNoriDataUI() {
+        renderEssencePriceInputs();
+        renderRecipeSalePriceInputs();
+        document.querySelectorAll("#inventoryInputs input[data-ingredient]").forEach(function (input) { input.value = ""; });
+        document.querySelectorAll("#ownedRecipeInputs input").forEach(function (input) { input.value = ""; });
+        restoreSavedInventory();
+
+        const ownedSaved = loadSavedOwnedRecipes();
+        document.querySelectorAll("#ownedRecipeInputs .owned-recipe-row").forEach(function (row) {
+            const name = row.dataset.recipeName;
+            const savedValue = ownedSaved[name];
+            let boxes = 0, sets = 0, pieces = 0;
+            if (savedValue && typeof savedValue === "object") {
+                boxes = Number(savedValue.boxes || 0);
+                sets = Number(savedValue.sets || 0);
+                pieces = Number(savedValue.pieces || 0);
+            } else if (savedValue != null) {
+                const count = Number(savedValue) || 0;
+                boxes = Math.floor(count / 3456);
+                const remainder = count % 3456;
+                sets = Math.floor(remainder / 64);
+                pieces = remainder % 64;
+            }
+            boxes += Math.floor(sets / 54);
+            sets = sets % 54;
+            const boxInput = row.querySelector("input[data-recipe-boxes]");
+            const setInput = row.querySelector("input[data-recipe-sets]");
+            const pieceInput = row.querySelector("input[data-recipe-pieces]");
+            if (boxInput) boxInput.value = boxes;
+            if (setInput) setInput.value = sets;
+            if (pieceInput) pieceInput.value = pieces;
+        });
+        if (typeof calculateOwnedRecipeScore === "function") calculateOwnedRecipeScore();
+    }
+
+    function setupNoriDataManagement() {
+        const exportButton = document.getElementById("exportNoriData");
+        const importButton = document.getElementById("importNoriData");
+        const fileInput = document.getElementById("importNoriDataFile");
+        const resetAllButton = document.getElementById("resetAllNoriData");
+        const message = document.getElementById("dataManagementMessage");
+        function showMessage(text, color) {
+            if (!message) return;
+            message.textContent = text;
+            message.style.color = color || "#168a50";
+            setTimeout(function () { message.textContent = ""; }, 3000);
+        }
+
+        if (exportButton) exportButton.addEventListener("click", function () {
+            const blob = new Blob([JSON.stringify(getNoriBackupData(), null, 2)], { type: "application/json;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            const d = new Date();
+            const stamp = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}`;
+            a.href = url; a.download = `새봄농장_데이터_${stamp}.json`;
+            document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+            showMessage("✅ 데이터 파일이 저장되었습니다.");
+        });
+
+        if (importButton && fileInput) {
+            importButton.addEventListener("click", function () { fileInput.click(); });
+            fileInput.addEventListener("change", function () {
+                const file = fileInput.files && fileInput.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function () {
+                    try {
+                        const data = JSON.parse(reader.result);
+                        if (!data || Number(data.version) !== 1) throw new Error("지원하지 않는 데이터 파일입니다.");
+                        if (!confirm("저장된 데이터를 불러오면 현재 입력값이 덮어써집니다. 계속할까요?")) return;
+                        saveEssencePrices(data.essencePrices && typeof data.essencePrices === "object" ? data.essencePrices : {});
+                        saveRecipeSalePrices(data.recipeSalePrices && typeof data.recipeSalePrices === "object" ? data.recipeSalePrices : {});
+                        saveUserFee(data.userFee || 0);
+                        localStorage.setItem(NORI_INVENTORY_STORAGE_KEY, JSON.stringify(data.inventory && typeof data.inventory === "object" ? data.inventory : {}));
+                        localStorage.setItem(NORI_OWNED_RECIPE_STORAGE_KEY, JSON.stringify(data.ownedRecipes && typeof data.ownedRecipes === "object" ? data.ownedRecipes : {}));
+                        refreshNoriDataUI();
+                        showMessage("✅ 데이터가 불러와졌습니다.");
+                    } catch (e) {
+                        console.error(e); showMessage("❌ 데이터 파일을 불러오지 못했습니다.", "#b33");
+                    } finally { fileInput.value = ""; }
+                };
+                reader.readAsText(file, "utf-8");
+            });
+        }
+
+        if (resetAllButton) resetAllButton.addEventListener("click", function () {
+            if (!confirm("⚠️ 전체 데이터를 초기화할까요?\\n\\n보유 정수 / 보유 요리 / 재료 가격 / 개인 판매가격 / 개인 수수료가 모두 삭제됩니다.\\n이 작업은 되돌릴 수 없습니다.")) return;
+            localStorage.removeItem(NORI_INVENTORY_STORAGE_KEY);
+            localStorage.removeItem(NORI_OWNED_RECIPE_STORAGE_KEY);
+            localStorage.removeItem(ESSENCE_PRICE_STORAGE_KEY);
+            localStorage.removeItem(RECIPE_SALE_PRICE_STORAGE_KEY);
+            localStorage.removeItem(USER_FEE_STORAGE_KEY);
+            window.noriEssencePrices = {};
+            window.noriRecipeSalePrices = {};
+            window.noriUserFee = 0;
+            document.querySelectorAll("#inventoryInputs input[data-ingredient], #ownedRecipeInputs input").forEach(function (input) { input.value = ""; });
+            const result = document.getElementById("craftableResults"); if (result) result.innerHTML = "";
+            renderEssencePriceInputs(); renderRecipeSalePriceInputs();
+            if (typeof calculateOwnedRecipeScore === "function") calculateOwnedRecipeScore();
+            showMessage("전체 데이터가 초기화되었습니다.", "#777");
+        });
+    }
+
+    const resetInventoryButton = document.getElementById("resetInventoryData");
+    if (resetInventoryButton) resetInventoryButton.addEventListener("click", function () {
+        if (!confirm("보유 정수 입력만 초기화할까요? 다른 데이터는 유지됩니다.")) return;
+        clearInventoryData();
+    });
+
+    const resetOwnedButton = document.getElementById("resetOwnedRecipeData");
+    if (resetOwnedButton) resetOwnedButton.addEventListener("click", function () {
+        if (!confirm("보유 요리 입력만 초기화할까요? 다른 데이터는 유지됩니다.")) return;
+        clearOwnedRecipeData();
+    });
+
+    setupNoriDataManagement();
 
     document
         .getElementById("findCraftableRecipes")
