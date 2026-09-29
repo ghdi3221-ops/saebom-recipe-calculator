@@ -2074,6 +2074,37 @@ function createInventoryFinder() {
         </button>
 
         <button
+            id="openSalesScoreCalculator"
+            type="button"
+            style="width:100%;margin-top:10px;padding:14px 18px;border:2px solid #18b86a;border-radius:14px;background:#18b86a;color:white;font-size:18px;font-weight:700;cursor:pointer;"
+        >🎯 판매 점수 계산</button>
+
+        <div id="salesScorePanel" style="display:none;margin-top:12px;padding:18px;border:2px solid #18b86a;border-radius:16px;background:rgba(255,255,255,.92);box-sizing:border-box;">
+            <div style="font-size:20px;font-weight:700;margin-bottom:8px;">🎯 판매 점수 계산</div>
+            <div style="font-size:14px;line-height:1.5;margin-bottom:14px;">판매하려는 목표 점수를 입력하면 현재 <b>보유 요리 전체 수량</b>을 기준으로 판매 가능한 총점을 계산합니다. 여러 종류의 요리를 합산한 결과입니다.</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+                <label for="salesRecipeFilter" style="font-weight:700;">판매 요리 범위</label>
+                <select id="salesRecipeFilter" style="padding:10px;border:1px solid #aaa;border-radius:8px;background:white;font-weight:700;">
+                    <option value="all">일반 + 고품질 요리</option>
+                    <option value="normal">일반 요리만</option>
+                    <option value="quality">고품질 요리만</option>
+                </select>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <label for="salesTargetScore" style="font-weight:700;">판매 점수</label>
+                <input id="salesTargetScore" type="text" inputmode="numeric" placeholder="예: 200,000,000" style="flex:1;min-width:180px;padding:10px;border:1px solid #aaa;border-radius:8px;box-sizing:border-box;text-align:right;">
+                <button id="calculateSalesScore" type="button" style="padding:10px 16px;border:0;border-radius:10px;background:#18b86a;color:white;font-size:15px;font-weight:700;cursor:pointer;">계산하기</button>
+            </div>
+            <div id="salesScoreResult" style="margin-top:14px;"></div>
+            <div id="salesScoreRecipeList" style="margin-top:12px;"></div>
+            <div style="margin-top:14px;display:flex;justify-content:center;">
+                <button id="calculateSalesCombination" type="button" style="padding:10px 16px;border:0;border-radius:10px;background:#7a4b25;color:white;font-size:15px;font-weight:700;cursor:pointer;">🧩 보유 요리로 목표에 맞춰 자동 조합</button>
+            </div>
+            <div id="salesCombinationResult" style="margin-top:12px;"></div>
+            <div style="margin-top:10px;font-size:12px;color:#777;line-height:1.5;">※ 자동 조합은 현재 보유 수량을 넘지 않는 범위에서 목표 점수 이하로 최대한 가깝게 맞춥니다. 모든 가능한 조합 중 절대적인 최적해를 보장하지 않을 수 있습니다.</div>
+        </div>
+
+        <button
             id="openEssencePriceSettings"
             type="button"
             style="
@@ -2191,6 +2222,8 @@ function createInventoryFinder() {
                     보유 요리 0개
                 </div>
             </div>
+
+        </div>
 
             <button
                 id="resetOwnedRecipeData"
@@ -2369,6 +2402,8 @@ function createInventoryFinder() {
     // ======================================================
 
     createOwnedRecipeScoreCalculator();
+
+    setupSalesScoreCalculator();
 
     // 입력할 때마다 자동 저장
     inputs
@@ -2877,6 +2912,202 @@ function calculateOwnedRecipeScore() {
 }
 
 
+// 판매 점수 계산 화면용 보유 수량 표시
+// 1세트 = 64개, 1큰상자 = 54세트 = 3,456개
+function formatSalesOwnedCount(count) {
+    count = Math.max(0, Math.floor(Number(count) || 0));
+    const boxes = Math.floor(count / 3456);
+    const remainderAfterBoxes = count % 3456;
+    const sets = Math.floor(remainderAfterBoxes / 64);
+    const pieces = remainderAfterBoxes % 64;
+
+    const parts = [];
+    if (boxes > 0) parts.push(`${formatNumber(boxes)}큰상자`);
+    if (sets > 0) parts.push(`${formatNumber(sets)}셋`);
+    if (pieces > 0 || parts.length === 0) parts.push(`${formatNumber(pieces)}개`);
+    return parts.join(" + ");
+}
+
+function getSalesRecipeCategory(recipe) {
+    return normalRecipes.includes(recipe) ? "normal" : "quality";
+}
+
+function getSalesRecipeFilterMode() {
+    const select = document.getElementById("salesRecipeFilter");
+    return select ? select.value : "all";
+}
+
+function recipeMatchesSalesFilter(recipe) {
+    const mode = getSalesRecipeFilterMode();
+    return mode === "all" || getSalesRecipeCategory(recipe) === mode;
+}
+
+function getOwnedSalesRecipeRows() {
+    const mode = getSalesRecipeFilterMode();
+    const recipeMap = new Map(getAllRecipes().map(function(recipe) { return [recipe.name, recipe]; }));
+    const rows = [];
+    document.querySelectorAll("#ownedRecipeInputs .owned-recipe-row").forEach(function(row) {
+        const recipe = recipeMap.get(row.dataset.recipeName);
+        if (!recipe) return;
+        if (mode !== "all" && getSalesRecipeCategory(recipe) !== mode) return;
+        const normalized = normalizeOwnedRecipeRow(row);
+        const count = (normalized.boxes * 3456) + (normalized.sets * 64) + normalized.pieces;
+        const score = Number(row.dataset.recipeScore || 0);
+        if (count <= 0 || score <= 0) return;
+        rows.push({
+            row: row,
+            recipe: recipe,
+            category: getSalesRecipeCategory(recipe),
+            name: row.dataset.recipeName || "요리",
+            score: score,
+            count: count,
+            total: score * count
+        });
+    });
+    return rows;
+}
+
+
+function calculateSalesScoreFromOwnedRecipes() {
+    const targetInput = document.getElementById("salesTargetScore");
+    const result = document.getElementById("salesScoreResult");
+    const list = document.getElementById("salesScoreRecipeList");
+    if (!targetInput || !result || !list) return;
+
+    const target = Number(String(targetInput.value || "").replace(/,/g, "").replace(/\s/g, ""));
+    if (!Number.isFinite(target) || target <= 0) {
+        result.innerHTML = `<div style="padding:12px;border-radius:10px;background:#fff4e5;color:#a45d16;font-weight:700;text-align:center;">판매 점수를 입력해주세요.</div>`;
+        list.innerHTML = "";
+        return;
+    }
+
+    const rows = getOwnedSalesRecipeRows();
+    let totalScore = 0;
+    let totalCount = 0;
+    rows.forEach(function(item) {
+        totalCount += item.count;
+        totalScore += item.total;
+    });
+
+    rows.sort(function (a, b) { return b.total - a.total; });
+    const difference = totalScore - target;
+    const achieved = totalScore >= target;
+    const percent = (totalScore / target) * 100;
+    const mode = getSalesRecipeFilterMode();
+    const modeLabel = mode === "normal" ? "일반 요리만" : mode === "quality" ? "고품질 요리만" : "일반 + 고품질 요리";
+
+    result.innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;">
+            <div style="padding:12px;border-radius:10px;background:#fff8e8;border:1px solid #e5b94b;text-align:center;"><div style="font-size:13px;color:#666;">🎯 목표 판매 점수</div><strong style="font-size:20px;">${formatNumber(target)}점</strong></div>
+            <div style="padding:12px;border-radius:10px;background:${achieved ? "#e9fff1" : "#fff4e5"};border:1px solid ${achieved ? "#8ed6a9" : "#e5b06b"};text-align:center;"><div style="font-size:13px;color:#666;">📦 ${modeLabel} 총 판매 점수</div><strong style="font-size:20px;color:${achieved ? "#138a4d" : "#a45d16"};">${formatNumber(totalScore)}점</strong></div>
+        </div>
+        <div style="margin-top:10px;padding:12px;border-radius:10px;background:${achieved ? "#e9fff1" : "#fff4e5"};text-align:center;font-weight:700;color:${achieved ? "#138a4d" : "#a45d16"};">${achieved ? `✅ 목표 판매 점수 달성 가능 · ${formatNumber(difference)}점 초과 · 목표의 ${percent.toFixed(2)}%` : `❌ 목표 판매 점수 부족 · ${formatNumber(Math.abs(difference))}점 부족 · 목표의 ${percent.toFixed(2)}%`}</div>
+        <div style="margin-top:8px;text-align:center;font-size:13px;color:#666;">현재 ${modeLabel} 보유 요리 총 ${formatNumber(totalCount)}개</div>
+    `;
+
+    if (!rows.length) {
+        list.innerHTML = `<div style="padding:12px;text-align:center;color:#777;">선택한 범위에서 보유 수량이 입력된 요리가 없습니다.</div>`;
+        return;
+    }
+
+    list.innerHTML = `<div style="font-size:16px;font-weight:700;margin-bottom:7px;">📋 ${modeLabel} 보유 요리별 판매 점수</div><div style="display:flex;flex-direction:column;gap:6px;">${rows.map(function (item) { return `<div style="display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:8px 10px;border:1px solid #d9eadf;border-radius:9px;background:#f7fff9;"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;">${item.name}</span><span style="font-size:13px;color:#666;">${formatSalesOwnedCount(item.count)}</span><strong style="white-space:nowrap;color:#138a4d;">${formatNumber(item.total)}점</strong></div>`; }).join("")}</div>`;
+}
+
+
+function findClosestSalesCombination(target) {
+    const available = getOwnedSalesRecipeRows().map(function(item) {
+        return {
+            name: item.name,
+            score: item.score,
+            count: item.count,
+            used: 0,
+            category: item.category
+        };
+    });
+    if (!available.length || target <= 0) return null;
+
+    // 1차: 높은 점수부터 목표를 넘지 않는 범위에서 채움
+    available.sort(function(a,b){ return b.score-a.score; });
+    let total = 0;
+    available.forEach(function(item){
+        const take = Math.min(item.count, Math.floor((target-total)/item.score));
+        if (take > 0) { item.used = take; total += take * item.score; }
+    });
+
+    // 2차: 작은 점수 요리로 남은 공간을 채움
+    available.slice().sort(function(a,b){ return a.score-b.score; }).forEach(function(item){
+        const remain = target-total;
+        const left = item.count-item.used;
+        if (remain <= 0 || left <= 0) return;
+        const take = Math.min(left, Math.floor(remain/item.score));
+        if (take > 0) { item.used += take; total += take * item.score; }
+    });
+
+    // 3차: 한 요리를 1개 빼고 다른 요리를 추가하는 교체 탐색
+    for (let round=0; round<80 && total<target; round++) {
+        let best = null;
+        available.forEach(function(out){
+            if (out.used <= 0) return;
+            const base = total-out.score;
+            available.forEach(function(add){
+                const left = add.count-add.used+(add===out ? 1 : 0);
+                if (left <= 0) return;
+                const take = Math.min(left, Math.floor((target-base)/add.score));
+                if (take <= 0) return;
+                const candidate = base+take*add.score;
+                if (candidate>total && candidate<=target && (!best || candidate>best.total)) best={out:out,add:add,take:take,total:candidate};
+            });
+        });
+        if (!best) break;
+        best.out.used -= 1;
+        best.add.used += best.take;
+        total = best.total;
+    }
+    return { target:target, total:total, chosen:available.filter(function(x){return x.used>0;}) };
+}
+
+function renderSalesCombination() {
+    const input=document.getElementById("salesTargetScore");
+    const result=document.getElementById("salesCombinationResult");
+    if(!input||!result)return;
+    const target=Number(String(input.value||"").replace(/,/g,"").replace(/\s/g,""));
+    if(!Number.isFinite(target)||target<=0){ result.innerHTML='<div style="padding:12px;border-radius:10px;background:#fff4e5;color:#a45d16;text-align:center;font-weight:700;">판매 점수를 먼저 입력해주세요.</div>'; return; }
+    const combo=findClosestSalesCombination(target);
+    if(!combo||!combo.chosen.length){ result.innerHTML='<div style="padding:12px;border-radius:10px;background:#fff4e5;color:#a45d16;text-align:center;">보유 수량이 입력된 요리가 없습니다.</div>'; return; }
+    const gap=target-combo.total;
+    const rows=combo.chosen.slice().sort(function(a,b){return b.used*b.score-a.used*a.score;});
+    result.innerHTML=`<div style="padding:12px;border:1px solid #c99a62;border-radius:10px;background:#fffaf3;">
+        <div style="font-size:17px;font-weight:800;color:#704017;margin-bottom:8px;">🧩 목표 판매 점수 자동 조합</div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;">
+          <div style="padding:10px;border-radius:9px;background:#fff8e8;text-align:center;"><div style="font-size:12px;color:#666;">목표</div><strong>${formatNumber(target)}점</strong></div>
+          <div style="padding:10px;border-radius:9px;background:#e9fff1;text-align:center;"><div style="font-size:12px;color:#666;">조합 점수</div><strong>${formatNumber(combo.total)}점</strong></div>
+        </div>
+        <div style="margin-top:8px;text-align:center;font-weight:700;color:#138a4d;">${gap===0 ? '🎯 목표 점수 정확히 달성' : `목표까지 ${formatNumber(gap)}점 부족`}</div>
+        <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px;">${rows.map(function(item){return `<div style="display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:8px 10px;border:1px solid #e5d2b0;border-radius:8px;background:#fff;"><span style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.name}</span><span>${formatSalesOwnedCount(item.used)}</span><strong style="color:#7a4b25;">${formatNumber(item.used*item.score)}점</strong></div>`;}).join('')}</div>
+        <div style="margin-top:8px;font-size:12px;color:#777;line-height:1.5;">※ 현재 보유 수량 이하에서 목표 이하로 최대한 가깝게 맞추는 자동 조합입니다. 조합 탐색 특성상 절대적인 최적 조합을 보장하지 않을 수 있습니다.</div>
+    </div>`;
+}
+
+function setupSalesScoreCalculator() {
+    const openButton = document.getElementById("openSalesScoreCalculator");
+    const panel = document.getElementById("salesScorePanel");
+    const calculateButton = document.getElementById("calculateSalesScore");
+    const combinationButton = document.getElementById("calculateSalesCombination");
+    const targetInput = document.getElementById("salesTargetScore");
+    if (!openButton || !panel || !calculateButton || !targetInput) return;
+    openButton.addEventListener("click", function () { panel.style.display = panel.style.display === "none" ? "block" : "none"; if (panel.style.display === "block") calculateSalesScoreFromOwnedRecipes(); });
+    calculateButton.addEventListener("click", calculateSalesScoreFromOwnedRecipes);
+    if (combinationButton) combinationButton.addEventListener("click", renderSalesCombination);
+    targetInput.addEventListener("keydown", function (event) { if (event.key === "Enter") calculateSalesScoreFromOwnedRecipes(); });
+    targetInput.addEventListener("input", function () { const raw = targetInput.value.replace(/,/g, "").replace(/[^0-9]/g, ""); targetInput.value = raw ? Number(raw).toLocaleString("ko-KR") : ""; });
+    const salesRecipeFilter = document.getElementById("salesRecipeFilter");
+    if (salesRecipeFilter) salesRecipeFilter.addEventListener("change", function () {
+        calculateSalesScoreFromOwnedRecipes();
+        const comboResult = document.getElementById("salesCombinationResult");
+        if (comboResult && comboResult.innerHTML.trim()) renderSalesCombination();
+    });
+}
+
 function createOwnedRecipeScoreCalculator() {
 
     const inputsContainer =
@@ -3046,6 +3277,7 @@ function createOwnedRecipeScoreCalculator() {
                 normalizeOwnedRecipeRow(row);
                 calculateOwnedRecipeScore();
                 saveOwnedRecipesFromInputs();
+                if (document.getElementById("salesScorePanel")?.style.display !== "none") calculateSalesScoreFromOwnedRecipes();
             });
 
             // 키보드로 입력을 끝낸 뒤에도 한 번 더 정리합니다.
@@ -3054,6 +3286,7 @@ function createOwnedRecipeScoreCalculator() {
                 normalizeOwnedRecipeRow(row);
                 calculateOwnedRecipeScore();
                 saveOwnedRecipesFromInputs();
+                if (document.getElementById("salesScorePanel")?.style.display !== "none") calculateSalesScoreFromOwnedRecipes();
             });
 
             input.addEventListener("blur", function () {
@@ -3061,6 +3294,7 @@ function createOwnedRecipeScoreCalculator() {
                 normalizeOwnedRecipeRow(row);
                 calculateOwnedRecipeScore();
                 saveOwnedRecipesFromInputs();
+                if (document.getElementById("salesScorePanel")?.style.display !== "none") calculateSalesScoreFromOwnedRecipes();
             });
         });
 
